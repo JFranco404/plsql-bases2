@@ -1,5 +1,5 @@
 --  -------------------------------PROCEDIMIENTOS-------------------------------
--- Procedimiento número 5 
+-- Procedimiento nï¿½mero 5 
 CREATE OR REPLACE PROCEDURE registrarEntradaCamion (
     p_placa IN VARCHAR2
 )
@@ -13,7 +13,7 @@ AS
     
     
 BEGIN
-    -- Obtener el ID del camión usando la placa
+    -- Obtener el ID del camiï¿½n usando la placa
     SELECT placa 
     INTO v_idCamion
     FROM CAMIONES
@@ -32,7 +32,7 @@ BEGIN
     WHERE placa = v_idCamion;
     
     
-    IF v_idcamion is null then --comprobar si la placa del camión está registrada en el sistema y si no lo está comprobar si va entrando o saliendo el visitante
+    IF v_idcamion is null then --comprobar si la placa del camiï¿½n estï¿½ registrada en el sistema y si no lo estï¿½ comprobar si va entrando o saliendo el visitante
         IF v_fecha_entrada IS NULL then
             INSERT INTO CAMIONES_VISITANTES (placa, fecha_entrada, fecha_salida)
             VALUES (p_placa, SYSDATE, null);
@@ -40,8 +40,8 @@ BEGIN
             UPDATE CAMIONES_VISITANTES c set fecha_salida = SYSDATE
             WHERE c.placa = v_idCamion;
         END IF;
-    ELSE -- Es un camión de la empresa por lo tanto se obtiene la información de su viaje
-        -- Obtener la información del viaje
+    ELSE -- Es un camiï¿½n de la empresa por lo tanto se obtiene la informaciï¿½n de su viaje
+        -- Obtener la informaciï¿½n del viaje
         SELECT v.ciudad_origen || ' - ' || v.ciudad_destino || ', Carga: ' || tc.descripcion AS viaje_info, (sysdate - v_fecha_salida) tiempo_viaje
         INTO v_viajeInfo, v_tiempo_tardado 
         FROM historico_viajes hv
@@ -52,7 +52,7 @@ BEGIN
     
     COMMIT;
     
-    DBMS_OUTPUT.PUT_LINE(v_viajeInfo || ' tiempo teórico: '|| v_tiempo_teorico || 'tiempo real tardado: '|| v_tiempo_tardado);
+    DBMS_OUTPUT.PUT_LINE(v_viajeInfo || ' tiempo teï¿½rico: '|| v_tiempo_teorico || 'tiempo real tardado: '|| v_tiempo_tardado);
 END registrarEntradaCamion;
 /
 
@@ -76,7 +76,7 @@ AS
 v_id_camion CAMIONES_ASIGNADOS.ID_CAMION%TYPE;
 v_id_conductor CAMIONES_ASIGNADOS.ID_CONDUCTOR%TYPE;
 BEGIN
---comprobar si existen ambos parámetros, camión y conductor
+--comprobar si existen ambos parï¿½metros, camiï¿½n y conductor
 
 SELECT id_camion, id_conductor 
 INTO v_id_camion, v_id_conductor
@@ -86,7 +86,7 @@ WHERE id_camion = p_placa and id_conductor = p_nuevo_conductor;
 IF v_id_camion IS NOT NULL and v_id_conductor IS NOT NULL then
     UPDATE CAMIONES_ASIGNADOS set id_camion = p_placa, id_conductor = p_nuevo_conductor;
 ELSE
-    RAISE_APPLICATION_ERROR(-20001, 'El conductor no está registrado en nuestro sistema, o el camión no se encuentra');
+    RAISE_APPLICATION_ERROR(-20001, 'El conductor no estï¿½ registrado en nuestro sistema, o el camiï¿½n no se encuentra');
 END IF;
 END actualizar_conductor;
 /
@@ -103,7 +103,7 @@ V_estado HISTORICO_VIAJES.IDESTADO%TYPE;
 BEGIN
 
 SELECT ca.idestado
-INTO v_estado --Obtener el estado del viaje del camión que ingresa o sale
+INTO v_estado --Obtener el estado del viaje del camiï¿½n que ingresa o sale
 FROM historico_viajes hv
 INNER JOIN camiones_asignados ca ON ca.id_asignacion = hv.id_asignacion
 where ca.id_camion = P_placa;
@@ -123,23 +123,6 @@ CASE
 END SP_estadofinalizado;
 /
 
-
-
--- Trigger máx id de CAMIONES_VISITANTES
-      CREATE OR REPLACE TRIGGER TgrGenIdCV
-      BEFORE INSERT ON CAMIONES_VISITANTES
-      FOR EACH ROW
-      
-      BEGIN 
-      SELECT MAX(ID)+1
-      INTO :NEW.ID
-      FROM CAMIONES_VISITANTES;
-      END TgrGenId;
-      /
-      show errors;
-      
-      
-      
 --  -----------------------------FUNCIONES--------------------------------------
 
 -- Funcion almacenada 1 --------------------------------------------------------
@@ -196,16 +179,16 @@ SHOW ERRORS;
 ALTER TABLE VIAJES ADD PESO_CARGA_KG NUMBER;
 
 -- Funcion almacenada 5 --------------------------------------------------------
-    --El trigger TR_CALCULAR_TIEMPO_TEORICO ya cumple esa función
+    --El trigger TR_CALCULAR_TIEMPO_TEORICO ya cumple esa funciï¿½n
 -- Funcion almacenada 7 --------------------------------------------------------
-    -- Una función almacenada que me permita conocer cuál es la ciudad de donde vienen la mayor cantidad de viajes
+    -- Una funciï¿½n almacenada que me permita conocer cuï¿½l es la ciudad de donde vienen la mayor cantidad de viajes
 
     CREATE OR REPLACE FUNCTION FnCiudadMasViajes
     RETURN VARCHAR2
     AS
         ciudad VIAJES.CIUDAD_DESTINO%TYPE;
     BEGIN
-        -- ciudad con más viajes
+        -- ciudad con mï¿½s viajes
         SELECT ciudad_origen 
         INTO ciudad
         FROM (
@@ -223,14 +206,14 @@ ALTER TABLE VIAJES ADD PESO_CARGA_KG NUMBER;
      
     SHOW ERRORS;
 -- Funcion almacenada 9 --------------------------------------------------------
-    -- Una función almacenada que me permita conocer cuál es la carga que más se transporta en la empresa
+    -- Una funciï¿½n almacenada que me permita conocer cuï¿½l es la carga que mï¿½s se transporta en la empresa
     CREATE OR REPLACE FUNCTION FnCargaMasTransportada
     RETURN VIAJES.ID_TIPO_CARGA%TYPE
     AS
         carga VIAJES.ID_TIPO_CARGA%TYPE;
     BEGIN
         -- carga mas transportada
-        SELECT id_tipo_carga --, peso_carga_kg, CANTIDAD por si se quiere devolver algo más que solo el id del más buscado (se necesitan más variables)
+        SELECT id_tipo_carga --, peso_carga_kg, CANTIDAD por si se quiere devolver algo mï¿½s que solo el id del mï¿½s buscado (se necesitan mï¿½s variables)
         INTO carga
         FROM (
             SELECT v.id_tipo_carga, v.peso_carga_kg, count(*) AS CANTIDAD
@@ -244,3 +227,19 @@ ALTER TABLE VIAJES ADD PESO_CARGA_KG NUMBER;
     END FnCargaMasTransportada;
     /
     SHOW ERRORS;
+
+-- ----------------TRIGGERS--------------------------
+    -- Trigger mï¿½x id de CAMIONES_VISITANTES
+      CREATE OR REPLACE TRIGGER TgrGenIdCV
+      BEFORE INSERT ON CAMIONES_VISITANTES
+      FOR EACH ROW
+      
+      BEGIN 
+      SELECT MAX(ID)+1
+      INTO :NEW.ID
+      FROM CAMIONES_VISITANTES;
+      END TgrGenId;
+      /
+      show errors;
+      
+      
