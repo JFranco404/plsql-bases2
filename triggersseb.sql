@@ -40,6 +40,7 @@ END Tgr_generar_turno_descarga;
 
 -- TRIIGER 5: ------------------------------------ Un trigger que lleve el control de cambios hechos en la base de datos (por cada tabla, es decir tenemos todos los triggers necesarios) 
 
+
 CREATE TABLE CAMBIOS_HISTORICO_VIAJES(
     ID_AUDITORIA NUMBER NOT NULL PRIMARY KEY,
     ANTIGUOID_HISTORIAL NUMBER NOT NULL,
@@ -62,7 +63,7 @@ CREATE TABLE CAMBIOS_HISTORICO_VIAJES(
     
 );
 
-CREATE OR REPLACE TRIGGER TRG_CAMBIOS_ESTUDIANTES
+CREATE OR REPLACE TRIGGER TRG_CAMBIOS_HISTORICO_VIAJES
 BEFORE INSERT OR UPDATE OR DELETE ON HISTORICO_VIAJES
 FOR EACH ROW
 DECLARE
@@ -116,6 +117,9 @@ BEGIN
 END;
 /
 
+update historico_viajes 
+set id_estado = 3
+where id_historial = 1;
 
 -- TRIIGER 7: ------------------------------------Un trigger que registre los cambios hechos en la tabla historico_viajes
 
@@ -123,30 +127,38 @@ END;
 ----------  Triggers para id únicos ?  -----------------------------  
 
 -- para la tabla camiones_visitantes
-CREATE OR REPLACE TRIGGER TgrGenIdCV
+
+    CREATE OR REPLACE TRIGGER TgrGenIdCV
       BEFORE INSERT ON CAMIONES_VISITANTES
       FOR EACH ROW
-      
-      BEGIN 
-      SELECT MAX(ID)+1
-      INTO :NEW.ID
-      FROM CAMIONES_VISITANTES;
-      END TgrGenId;
-      /
-      show errors;
-      
+    BEGIN 
+      :NEW.ID := SEQ_CAMIONES_VISITANTES.NEXTVAL;
+    END TgrGenIdCV;
+    /
+
       
 -- para la tabla cambios_historico_viajes
-CREATE OR REPLACE TRIGGER TgrGenIdCHV
+    CREATE OR REPLACE TRIGGER TgrGenIdCHV
       BEFORE INSERT ON CAMBIOS_HISTORICO_VIAJES
       FOR EACH ROW
-      
-      BEGIN 
-      SELECT MAX(ID_AUDITORIA)+1
-      INTO :NEW.ID_AUDITORIA
-      FROM CAMBIOS_HISTORICO_VIAJES;
-      END TgrGenId;
-      /
-      show errors;
+    BEGIN 
+      :NEW.ID_AUDITORIA := SEQ_CAMBIOS_HISTORICO_VIAJES.NEXTVAL;
+    END TgrGenIdCHV;
+    /
+    show errors;
+
+---- SECUENCIAS para generar ids
+
+
+CREATE SEQUENCE SEQ_CAMIONES_VISITANTES
+  START WITH 1
+  INCREMENT BY 1
+  NOMAXVALUE;
+
+
+CREATE SEQUENCE SEQ_CAMBIOS_HISTORICO_VIAJES
+  START WITH 1
+  INCREMENT BY 1
+  NOMAXVALUE;
 
       
