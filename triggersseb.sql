@@ -21,8 +21,22 @@
     /
     
 
-    COMMIT
+    COMMIT;
 -- TRIIGER 3: ------------------------------------ Un trigger cuando un camión ingrese a la empresa, que genere un turno de descarga
+
+CREATE OR REPLACE TRIGGER Tgr_generar_turno_descarga
+AFTER INSERT OR UPDATE ON HISTORICO_VIAJES
+FOR EACH ROW
+
+DECLARE
+
+BEGIN
+    select * 
+    from turnos_descarga;
+-- select 
+END Tgr_generar_turno_descarga;
+/
+
 
 -- TRIIGER 5: ------------------------------------ Un trigger que lleve el control de cambios hechos en la base de datos (por cada tabla, es decir tenemos todos los triggers necesarios) 
 
@@ -49,7 +63,7 @@ CREATE TABLE CAMBIOS_HISTORICO_VIAJES(
 );
 
 CREATE OR REPLACE TRIGGER TRG_CAMBIOS_ESTUDIANTES
-BEFORE INSERT OR UPDATE ON TU_TABLA
+BEFORE INSERT OR UPDATE OR DELETE ON HISTORICO_VIAJES
 FOR EACH ROW
 DECLARE
     ACCION VARCHAR2(20);
@@ -58,38 +72,44 @@ BEGIN
         ACCION := 'INSERT';
     ELSIF UPDATING THEN
         ACCION := 'UPDATE';
+    ELSE
+        ACCION := 'DELETE';
     END IF;
 
-    INSERT INTO AUDITORIA_CAMBIOS_ESTUDIANTES (
-        ID_AUDITORIA,
-        TIPO,
-        TABLA,
+    INSERT INTO CAMBIOS_HISTORICO_VIAJES ( --CAMBIAR
+        ANTIGUOID_HISTORIAL,
+        ANTIGUOID_VIAJE,
+        ANTIGUOID_ASIGNACION,
+        ANTIGUOID_ESTADO, 
+        ANTIGUOTIEMPO_TEORICO,
+        ANTIGUOTIEMPO_REAL,
+        ANTIGUODESCRIPCION,
+        NUEVOID_HISTORIAL,
+        NUEVOID_VIAJE,
+        NUEVOID_ASIGNACION,
+        NUEVOID_ESTADO, 
+        NUEVOTIEMPO_TEORICO,
+        NUEVOTIEMPO_REAL,
+        NUEVODESCRIPCION,
         FECHA,
-        ANTIGUOIDESTUDIANTE,
-        ANTIGUODEPARTAMENTO,
-        ANTIGUOCURSO,
-        ANTIGUOGRADO,
-        NUEVOIDESTUDIANTE,
-        NUEVODEPARTAMENTO,
-        NUEVONCURSO,
-        NUEVOGRADO,
-        CODIGO,
         ACCION_REALIZADA,
         USUARIO_CAMBIO
     ) VALUES (
-        SEQ_AUDITORIA_CAMBIOS_ESTUDIANTES.NEXTVAL,
-        :OLD.TIPO,
-        :OLD.TABLA,
-        :OLD.FECHA,
-        :OLD.ANTIGUOIDESTUDIANTE,
-        :OLD.ANTIGUODEPARTAMENTO,
-        :OLD.ANTIGUOCURSO,
-        :OLD.ANTIGUOGRADO,
-        :NEW.NUEVOIDESTUDIANTE,
-        :NEW.NUEVODEPARTAMENTO,
-        :NEW.NUEVONCURSO,
-        :NEW.NUEVOGRADO,
-        :NEW.CODIGO,
+        :OLD.ID_HISTORIAL,
+        :OLD.ID_VIAJE,
+        :OLD.ID_ASIGNACION,
+        :OLD.ID_ESTADO,
+        :OLD.TIEMPO_TEORICO,
+        :OLD.TIEMPO_REAL,
+        :OLD.DESCRIPCION,
+        :NEW.ID_HISTORIAL,
+        :NEW.ID_VIAJE,
+        :NEW.ID_ASIGNACION,
+        :NEW.ID_ESTADO,
+        :NEW.TIEMPO_TEORICO,
+        :NEW.TIEMPO_REAL,
+        :NEW.DESCRIPCION,
+        SYSDATE,
         ACCION,
         USER
     );
@@ -98,3 +118,35 @@ END;
 
 
 -- TRIIGER 7: ------------------------------------Un trigger que registre los cambios hechos en la tabla historico_viajes
+
+
+----------  Triggers para id únicos ?  -----------------------------  
+
+-- para la tabla camiones_visitantes
+CREATE OR REPLACE TRIGGER TgrGenIdCV
+      BEFORE INSERT ON CAMIONES_VISITANTES
+      FOR EACH ROW
+      
+      BEGIN 
+      SELECT MAX(ID)+1
+      INTO :NEW.ID
+      FROM CAMIONES_VISITANTES;
+      END TgrGenId;
+      /
+      show errors;
+      
+      
+-- para la tabla cambios_historico_viajes
+CREATE OR REPLACE TRIGGER TgrGenIdCHV
+      BEFORE INSERT ON CAMBIOS_HISTORICO_VIAJES
+      FOR EACH ROW
+      
+      BEGIN 
+      SELECT MAX(ID_AUDITORIA)+1
+      INTO :NEW.ID_AUDITORIA
+      FROM CAMBIOS_HISTORICO_VIAJES;
+      END TgrGenId;
+      /
+      show errors;
+
+      
