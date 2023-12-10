@@ -98,11 +98,11 @@ CREATE OR REPLACE PROCEDURE SP_actualizarEstado (
 )
 AS 
 
-V_estado HISTORICO_VIAJES.IDESTADO%TYPE;
+V_estado HISTORICO_VIAJES.ID_ESTADO%TYPE;
 
 BEGIN
 
-SELECT ca.idestado
+SELECT hv.id_estado
 INTO v_estado --Obtener el estado del viaje del cami�n que ingresa o sale
 FROM historico_viajes hv
 INNER JOIN camiones_asignados ca ON ca.id_asignacion = hv.id_asignacion
@@ -112,15 +112,15 @@ where ca.id_camion = P_placa;
 CASE
     WHEN v_estado = 1 THEN --Cuando un camion llegue el estado 1 es en curso, lo cambia a finalizado
         UPDATE historico_viajes 
-        SET idestado = 2;
+        SET id_estado = 2;
     WHEN v_estado = 3 THEN --Cuando un camion sale el estado 3 es en sin asignar, lo cambia a en cuurso
         UPDATE historico_viajes 
-        SET idestado = 1;
+        SET id_estado = 1;
     ELSE   
         RAISE_APPLICATION_ERROR(-20007, 'Tas loco papi');
   END CASE;
 
-END SP_estadofinalizado;
+END SP_actualizarEstado;
 /
 
 --  -----------------------------FUNCIONES--------------------------------------
