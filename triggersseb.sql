@@ -39,7 +39,60 @@ END Tgr_generar_turno_descarga;
 
 
 -- TRIIGER 5: ------------------------------------ Un trigger que lleve el control de cambios hechos en la base de datos (por cada tabla, es decir tenemos todos los triggers necesarios) 
+CREATE TABLE CAMBIOS_CAMIONES_ASIGNADOS(
+    ID_AUDITORIA NUMBER NOT NULL PRIMARY KEY,
+    ANTIGUOID_ASIGNACION NUMBER NOT NULL,
+    ANTIGUOID_CAMION VARCHAR2(10) NOT NULL,
+    ANTIGUOID_CONDUCTOR NUMBER NOT NULL,
+    NUEVOID_ASIGNACION NUMBER NOT NULL,
+    NUEVOID_CAMION VARCHAR2(10) NOT NULL,
+    NUEVOID_CONDUCTOR NUMBER NOT NULL,
+    FECHA TIMESTAMP,
+    ACCION_REALIZADA VARCHAR2(20),
+    USUARIO_CAMBIO VARCHAR2(50)
+);
 
+DROP TABLE CAMBIOS_CAMIONES_ASIGNADOS;
+
+CREATE OR REPLACE TRIGGER TRG_CAMBIOS_CAMIONES_ASIGNADOS
+BEFORE INSERT OR UPDATE OR DELETE ON CAMIONES_ASIGNADOS
+FOR EACH ROW
+DECLARE
+    ACCION VARCHAR2(20);
+BEGIN
+    IF INSERTING THEN
+        ACCION := 'INSERT';
+    ELSIF UPDATING THEN
+        ACCION := 'UPDATE';
+    ELSE
+        ACCION := 'DELETE';
+    END IF;
+
+    INSERT INTO CAMBIOS_CAMIONES_ASIGNADOS( --CAMBIAR
+        ANTIGUOID_ASIGNACION,
+        ANTIGUOID_CAMION,
+        ANTIGUOID_CONDUCTOR,
+        NUEVOID_ASIGNACION,
+        NUEVOID_CAMION,
+        NUEVOID_CONDUCTOR,
+        FECHA,
+        ACCION_REALIZADA,
+        USUARIO_CAMBIO
+    ) VALUES (
+        :OLD.ID_ASIGNACION,
+        :OLD.ID_CAMION,
+        :OLD.ID_CONDUCTOR,
+        :OLD.ID_ASIGNACION,
+        :NEW.ID_CAMION,
+        :NEW.ID_CONDUCTOR,
+        SYSDATE,
+        ACCION,
+        USER
+    );
+END;
+/
+
+-- TRIIGER 7: ------------------------------------Un trigger que registre los cambios hechos en la tabla historico_viajes
 
 CREATE TABLE CAMBIOS_HISTORICO_VIAJES(
     ID_AUDITORIA NUMBER NOT NULL PRIMARY KEY,
@@ -57,7 +110,7 @@ CREATE TABLE CAMBIOS_HISTORICO_VIAJES(
 	NUEVOTIEMPO_TEORICO INTERVAL DAY TO SECOND,
 	NUEVOTIEMPO_REAL INTERVAL DAY TO SECOND,
 	NUEVODESCRIPCION VARCHAR2(80),
-    FECHA DATE,
+    FECHA TIMESTAMP,
     ACCION_REALIZADA VARCHAR2(20),
     USUARIO_CAMBIO VARCHAR2(50)
     
@@ -117,11 +170,10 @@ BEGIN
 END;
 /
 
-update historico_viajes 
-set id_estado = 3
-where id_historial = 1;
 
--- TRIIGER 7: ------------------------------------Un trigger que registre los cambios hechos en la tabla historico_viajes
+-- update historico_viajes 
+-- set id_estado = 3
+-- where id_historial = 1;
 
 
 ----------  Triggers para id únicos ?  -----------------------------  
@@ -147,8 +199,18 @@ where id_historial = 1;
     /
     show errors;
 
+      
+-- para la tabla cambios_camiones_asignados
+    CREATE OR REPLACE TRIGGER TgrGenIdCCA
+      BEFORE INSERT ON CAMBIOS_CAMIONES_ASIGNADOS
+      FOR EACH ROW
+    BEGIN 
+      :NEW.ID_AUDITORIA := SEQ_CAMBIOS_CAMIONES_ASIGNADOS.NEXTVAL;
+    END TgrGenIdCCA;
+    /
+    show errors;
+    
 ---- SECUENCIAS para generar ids
-
 
 CREATE SEQUENCE SEQ_CAMIONES_VISITANTES
   START WITH 1
@@ -161,4 +223,8 @@ CREATE SEQUENCE SEQ_CAMBIOS_HISTORICO_VIAJES
   INCREMENT BY 1
   NOMAXVALUE;
 
+CREATE SEQUENCE SEQ_CAMBIOS_CAMIONES_ASIGNADOS
+  START WITH 0
+  INCREMENT BY 1
+  NOMAXVALUE;
       

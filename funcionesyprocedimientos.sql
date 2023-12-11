@@ -229,7 +229,7 @@ ALTER TABLE VIAJES ADD PESO_CARGA_KG NUMBER;
     SHOW ERRORS;
 
 -- ----------------TRIGGERS--------------------------
-    -- Trigger m�x id de CAMIONES_VISITANTES
+    -- Trigger max id de CAMIONES_VISITANTES
       CREATE OR REPLACE TRIGGER TgrGenIdCV
       BEFORE INSERT ON CAMIONES_VISITANTES
       FOR EACH ROW
