@@ -1,0 +1,8 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<OSDM_Design class="oracle.dbtools.crest.model.design.Design" name="diseño" id="A5002400-23C5-7BAC-1BA5-1EDF7B5C089B" version="3.5">
+<createdBy>SEBASTIAN GALLEGO</createdBy>
+<createdTime>2023-12-14 00:38:49 UTC</createdTime>
+<ownerDesignName>diseño</ownerDesignName>
+<capitalNames>false</capitalNames>
+<designId>A5002400-23C5-7BAC-1BA5-1EDF7B5C089B</designId>
+</OSDM_Design>
