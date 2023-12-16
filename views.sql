@@ -68,12 +68,65 @@ WHERE
 
 -- Vista 5 -- una vista que permita visualizar el historial de viajes de un cami�n (con el fin de saber qu� tan usado ha sido el cami�n 
 
--- Por revisar!!!
-CREATE VIEW HistorialViajesCamion AS
-SELECT hv.descripcion
-FROM HISTORICO_VIAJES hv
-INNER JOIN CAMIONES_ASIGNADOS ca ON ca.id_asignacion = hv.id_asignacion
-WHERE ca.id_camion = :id_camion;
+CREATE OR REPLACE TYPE HistorialViajesCamionType AS OBJECT (
+    id_camion VARCHAR2(50),
+    descripcion VARCHAR2(100),
+    id_estado NUMBER,
+    fecha_salida DATE,
+    fecha_llegada DATE
+);
+
+
+CREATE OR REPLACE TYPE HistorialViajesCamionTableType AS TABLE OF HistorialViajesCamionType;
+
+CREATE OR REPLACE FUNCTION HistorialViajesCamion (
+    p_id_camion VARCHAR2
+) RETURN HistorialViajesCamionTableType PIPELINED AS
+BEGIN
+    FOR rec IN (
+        SELECT ca.id_camion, hv.descripcion, hv.id_estado, hv.fecha_salida, hv.fecha_llegada
+        FROM HISTORICO_VIAJES hv
+        INNER JOIN CAMIONES_ASIGNADOS ca ON ca.id_asignacion = hv.id_asignacion
+        WHERE ca.id_camion = p_id_camion
+    ) LOOP
+        PIPE ROW (HistorialViajesCamionType(
+            rec.id_camion,
+            rec.descripcion,
+            rec.id_estado,
+            rec.fecha_salida,
+            rec.fecha_llegada
+        ));
+    END LOOP;
+
+    RETURN;
+END HistorialViajesCamion;
+/
+
+CREATE OR REPLACE VIEW VistaHistorialViajesCamion AS
+SELECT * FROM TABLE(HistorialViajesCamion('SMN139'));
+
+select * from VistaHistorialViajesCamion
+
+
+    -- CREATE OR REPLACE FUNCTION HistorialViajesCamion (
+    --    p_id_camion VARCHAR2
+    -- ) RETURN SYS_REFCURSOR AS
+    --    v_cursor SYS_REFCURSOR;
+    --BEGIN
+    --    OPEN v_cursor FOR
+    --        SELECT ca.id_camion, hv.descripcion, hv.id_estado, hv.fecha_salida, hv.fecha_llegada
+    --        FROM HISTORICO_VIAJES hv
+    --        INNER JOIN CAMIONES_ASIGNADOS ca ON ca.id_asignacion = hv.id_asignacion
+    --        WHERE ca.id_camion = p_id_camion;
+    
+        --RETURN v_cursor;
+    --END HistorialViajesCamion;
+    --/
+
+-- No es una vista, pero es la forma de poder consultar los historiales de un cami�n parametrizando la consulta
+    --VAR result_set REFCURSOR;
+    --EXEC :result_set := HistorialViajesCamion('SMN139');
+    --PRINT result_set;
 
 -- Vista 6 -----------------------------------------------------
 
@@ -97,7 +150,6 @@ WHERE
 SELECT * FROM ViajesRealizados;
 
 -- Vista 7 -- Una vista que permita visualizar los viajes con el tipo de carga en ese viaje
-
 CREATE VIEW tipocarga_viajes AS
 SELECT CA.id_camion, TC.ID_TIPO_CARGA, TC.DESCRIPCION
 FROM CAMIONES_ASIGNADOS CA
@@ -137,15 +189,17 @@ SELECT * FROM CamionesMasViajesUltimoMes;
 CREATE VIEW CamionesMenosViajesUltimoMes AS
 SELECT
     ca.id_camion,
-    COUNT(v.id_viaje) AS cantidad_viajes
+    COUNT(hv.id_viaje) AS cantidad_viajes
 FROM
     CAMIONES c
 JOIN
     CAMIONES_ASIGNADOS ca ON c.PLACA = ca.id_camion
+JOIN
+    HISTORICO_VIAJES hv ON hv.id_asignacion = ca.id_asignacion
 WHERE
-    v.fecha_viaje >= TRUNC(SYSDATE, 'MM') - INTERVAL '1' MONTH -- Filtrar por el �ltimo mes
+    hv.fecha_llegada >= TRUNC(SYSDATE, 'MM') - INTERVAL '1' MONTH
 GROUP BY
-    c.id_camion, c.nombre_camion
+    ca.id_camion
 ORDER BY
     cantidad_viajes ASC; -- Ordenar de menor a mayor cantidad de viajes
     
@@ -167,7 +221,6 @@ ORDER BY
   CANTIDAD_CAMIONES_ASIGNADOS DESC;
 
 SELECT * FROM CondMasCamionesAsig;
-
 
 -- Vista 11 -- Una vista que permita visualizar los conductores que menos camiones les han sido asignados
 
