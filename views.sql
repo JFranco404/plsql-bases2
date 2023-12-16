@@ -1,6 +1,6 @@
 ----- Views del proyecto --------------------------
 
--- Vista 1 -- Una vista que permita consultar los camiones que han hecho viajes de más de 8 horas en los últimos 7 días.
+-- Vista 1 -- Una vista que permita consultar los camiones que han hecho viajes de mï¿½s de 8 horas en los ï¿½ltimos 7 dï¿½as.
 
 CREATE VIEW Camiones_viajes_8h7d AS
 SELECT PLACA, ID_VIAJE, DESCRIPCION
@@ -12,17 +12,61 @@ WHERE HV.TIEMPO_REAL > INTERVAL '8' HOUR AND HV.fecha_salida >= (SYSDATE - INTER
 
 ALTER TABLE HISTORICO_VIAJES ADD fecha_llegada TIMESTAMP;
 
+-- Vista 2 -------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW CamionesConductoresEnViaje AS
+SELECT
+  ca.ID_ASIGNACION,
+  c.PLACA AS PLACA_CAMION,
+  c.MARCA,
+  c.MODELO,
+  co.NOMBRES || ' ' || co.APELLIDOS AS NOMBRE_CONDUCTOR,
+  tv.CIUDAD_ORIGEN,
+  tv.CIUDAD_DESTINO,
+  tv.DURACION_ESTIMADA,
+  hv.FECHA_SALIDA,
+  hv.FECHA_LLEGADA,
+  ev.ESTADO AS ESTADO_VIAJE
+FROM
+  CAMIONES_ASIGNADOS ca
+  JOIN CAMIONES c ON ca.ID_CAMION = c.PLACA
+  JOIN CONDUCTORES co ON ca.ID_CONDUCTOR = co.CEDULA
+  JOIN HISTORICO_VIAJES hv ON ca.ID_ASIGNACION = hv.ID_ASIGNACION
+  JOIN VIAJES tv ON hv.ID_VIAJE = tv.ID_VIAJE
+  JOIN ESTADOS_VIAJE ev ON hv.ID_ESTADO = ev.ID_ESTADO
+WHERE
+  ev.ESTADO = 'EN CURSO';
+
 -- Vista 3 -------------------------------------------------------------------------
 
--- Una vista que permita ver el número total de vehículos que están en viaje (estado en curso)
+-- Una vista que permita ver el nï¿½mero total de vehï¿½culos que estï¿½n en viaje (estado en curso)
 
 CREATE VIEW Vehiculos_en_curso AS
 SELECT count(*) Vehiculos_En_Curso
 FROM HISTORICO_VIAJES
 WHERE id_estado = 2;
 
+--Vista 4 --------------------------------------------------------------------------
+CREATE OR REPLACE VIEW ViajesEntregadosEnUltimas24Horas AS
+SELECT
+  hv.ID_VIAJE,
+  tv.CIUDAD_ORIGEN,
+  tv.CIUDAD_DESTINO,
+  hv.FECHA_SALIDA,
+  hv.FECHA_LLEGADA,
+  ev.ESTADO AS ESTADO_VIAJE
+FROM
+  HISTORICO_VIAJES hv
+  JOIN VIAJES tv ON hv.ID_VIAJE = tv.ID_VIAJE
+  JOIN ESTADOS_VIAJE ev ON hv.ID_ESTADO = ev.ID_ESTADO
+WHERE
+  ev.ESTADO = 'Entregado'
+  AND hv.FECHA_LLEGADA IS NOT NULL
+  AND hv.FECHA_LLEGADA >= SYSDATE - INTERVAL '24' HOUR;
 
--- Vista 5 -- una vista que permita visualizar el historial de viajes de un camión (con el fin de saber qué tan usado ha sido el camión 
+
+
+-- Vista 5 -- una vista que permita visualizar el historial de viajes de un camiï¿½n (con el fin de saber quï¿½ tan usado ha sido el camiï¿½n 
 
 CREATE OR REPLACE TYPE HistorialViajesCamionType AS OBJECT (
     id_camion VARCHAR2(50),
@@ -78,12 +122,31 @@ select * from VistaHistorialViajesCamion
     --END HistorialViajesCamion;
     --/
 
--- No es una vista, pero es la forma de poder consultar los historiales de un camión parametrizando la consulta
+-- No es una vista, pero es la forma de poder consultar los historiales de un camiï¿½n parametrizando la consulta
     --VAR result_set REFCURSOR;
     --EXEC :result_set := HistorialViajesCamion('SMN139');
     --PRINT result_set;
 
+-- Vista 6 -----------------------------------------------------
 
+CREATE OR REPLACE VIEW ViajesRealizados AS
+SELECT
+  hv.ID_VIAJE,
+  tv.CIUDAD_ORIGEN,
+  tv.CIUDAD_DESTINO,
+  hv.FECHA_SALIDA,
+  hv.FECHA_LLEGADA,
+  ev.ESTADO AS ESTADO_VIAJE
+FROM
+  HISTORICO_VIAJES hv
+  JOIN VIAJES tv ON hv.ID_VIAJE = tv.ID_VIAJE
+  JOIN ESTADOS_VIAJE ev ON hv.ID_ESTADO = ev.ID_ESTADO
+WHERE
+  hv.FECHA_LLEGADA IS NOT NULL;
+
+ 
+ 
+SELECT * FROM ViajesRealizados;
 
 -- Vista 7 -- Una vista que permita visualizar los viajes con el tipo de carga en ese viaje
 CREATE VIEW tipocarga_viajes AS
@@ -93,7 +156,33 @@ INNER JOIN HISTORICO_VIAJES HV ON CA.ID_ASIGNACION = HV.ID_ASIGNACION
 INNER JOIN VIAJES V ON V.ID_VIAJE = HV.ID_VIAJE
 INNER JOIN TIPO_CARGA TC ON V.ID_TIPO_CARGA = TC.ID_TIPO_CARGA;
 
--- Vista 9 -- una vista con los camiones que menos viajes han realizado en el último mes
+-- Vista 8 ----------------------------------------------------------------
+
+CREATE OR REPLACE VIEW CamionesMasViajesUltimoMes AS
+SELECT
+  ca.ID_CAMION,
+  c.PLACA,
+  c.MARCA,
+  c.MODELO,
+  COUNT(hv.ID_VIAJE) AS CANTIDAD_VIAJES
+FROM
+  CAMIONES_ASIGNADOS ca
+  JOIN CAMIONES c ON ca.ID_CAMION = c.PLACA
+  JOIN HISTORICO_VIAJES hv ON ca.ID_ASIGNACION = hv.ID_ASIGNACION
+WHERE
+  hv.FECHA_LLEGADA IS NOT NULL
+  AND hv.FECHA_LLEGADA >= TRUNC(SYSDATE, 'MM') - INTERVAL '1' MONTH
+GROUP BY
+  ca.ID_CAMION, c.PLACA, c.MARCA, c.MODELO
+ORDER BY
+  CANTIDAD_VIAJES DESC;
+
+ 
+SELECT * FROM CamionesMasViajesUltimoMes;
+
+
+
+-- Vista 9 -- una vista con los camiones que menos viajes han realizado en el ï¿½ltimo mes
 
 -- Me la dio chepe, toca corregir, revisarla o hacerla de nuevo
 CREATE VIEW CamionesMenosViajesUltimoMes AS
@@ -112,6 +201,25 @@ GROUP BY
     ca.id_camion
 ORDER BY
     cantidad_viajes ASC; -- Ordenar de menor a mayor cantidad de viajes
+    
+    
+-- Vista 10 -----------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW CondMasCamionesAsig AS
+SELECT
+  co.CEDULA,
+  co.NOMBRES,
+  co.APELLIDOS,
+  COUNT(ca.ID_CAMION) AS CANTIDAD_CAMIONES_ASIGNADOS
+FROM
+  CONDUCTORES co
+  JOIN CAMIONES_ASIGNADOS ca ON co.CEDULA = ca.ID_CONDUCTOR
+GROUP BY
+  co.CEDULA, co.NOMBRES, co.APELLIDOS
+ORDER BY
+  CANTIDAD_CAMIONES_ASIGNADOS DESC;
+
+SELECT * FROM CondMasCamionesAsig;
 
 -- Vista 11 -- Una vista que permita visualizar los conductores que menos camiones les han sido asignados
 
@@ -123,7 +231,33 @@ GROUP BY CO.CEDULA, CO.NOMBRES
 ORDER BY CANTIDAD_ASIGNACIONES ASC;
 
 
--- Vista 13 -- Una vista con los viajes que fueron entregados antes del tiempo teórico
+-- Vista 12 --------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW ViajesEntregadosFueraDeTiempoTeorico AS
+SELECT
+  hv.ID_HISTORIAL,
+  tv.CIUDAD_ORIGEN,
+  tv.CIUDAD_DESTINO,
+  hv.FECHA_SALIDA,
+  hv.FECHA_LLEGADA,
+  tv.DURACION_ESTIMADA,
+  hv.TIEMPO_TEORICO,
+  ev.ESTADO AS ESTADO_VIAJE
+FROM
+  HISTORICO_VIAJES hv
+  JOIN VIAJES tv ON hv.ID_VIAJE = tv.ID_VIAJE
+  JOIN ESTADOS_VIAJE ev ON hv.ID_ESTADO = ev.ID_ESTADO
+WHERE
+  ev.ESTADO = 'FINALIZADO'
+  AND hv.FECHA_LLEGADA IS NOT NULL
+  AND hv.FECHA_LLEGADA > hv.FECHA_SALIDA + hv.TIEMPO_TEORICO;
+
+ SELECT * FROM ViajesEntregadosFueraDeTiempoTeorico;
+
+
+
+
+-- Vista 13 -- Una vista con los viajes que fueron entregados antes del tiempo teï¿½rico
 
 CREATE VIEW ViajesEntregadosAntesDelTiempo AS
 SELECT
