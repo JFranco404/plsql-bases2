@@ -13,7 +13,7 @@ AS
     
     
 BEGIN
-    -- Obtener el ID del camiï¿½n usando la placa
+    -- Obtener el ID del camión usando la placa
     SELECT placa 
     INTO v_idCamion
     FROM CAMIONES
@@ -93,35 +93,35 @@ END actualizar_conductor;
 
 -- procedimiento 9 ---------------------------------------------------------------------------------------------------------------
 
-CREATE OR REPLACE PROCEDURE SP_actualizarEstado (
-    P_placa IN CAMIONES.PLACA%TYPE
-)
-AS 
+-- CREATE OR REPLACE PROCEDURE SP_actualizarEstado (
+--    P_placa IN CAMIONES.PLACA%TYPE
+--)
+--AS 
 
-V_estado HISTORICO_VIAJES.ID_ESTADO%TYPE;
+--V_estado HISTORICO_VIAJES.ID_ESTADO%TYPE;
 
-BEGIN
+--BEGIN
 
-SELECT hv.id_estado
-INTO v_estado --Obtener el estado del viaje del camiï¿½n que ingresa o sale
-FROM historico_viajes hv
-INNER JOIN camiones_asignados ca ON ca.id_asignacion = hv.id_asignacion
-where ca.id_camion = P_placa;
+--SELECT hv.id_estado
+--INTO v_estado --Obtener el estado del viaje del camiï¿½n que ingresa o sale
+--FROM historico_viajes hv
+--INNER JOIN camiones_asignados ca ON ca.id_asignacion = hv.id_asignacion
+--where ca.id_camion = P_placa;
 
 
-CASE
-    WHEN v_estado = 1 THEN --Cuando un camion llegue el estado 1 es en curso, lo cambia a finalizado
-        UPDATE historico_viajes 
-        SET id_estado = 2;
-    WHEN v_estado = 3 THEN --Cuando un camion sale el estado 3 es en sin asignar, lo cambia a en cuurso
-        UPDATE historico_viajes 
-        SET id_estado = 1;
-    ELSE   
-        RAISE_APPLICATION_ERROR(-20007, 'Tas loco papi');
-  END CASE;
+-- CASE
+--  WHEN v_estado = 1 THEN --Cuando un camion llegue el estado 1 es en curso, lo cambia a finalizado
+--       UPDATE historico_viajes 
+--        SET id_estado = 2;
+--   WHEN v_estado = 3 THEN --Cuando un camion sale el estado 3 es en sin asignar, lo cambia a en cuurso
+--      UPDATE historico_viajes 
+--        SET id_estado = 1;
+--    ELSE   
+--        RAISE_APPLICATION_ERROR(-20007, 'Tas loco papi');
+--  END CASE;
 
-END SP_actualizarEstado;
-/
+-- END SP_actualizarEstado;
+-- /
 
 --  -----------------------------FUNCIONES--------------------------------------
 

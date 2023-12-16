@@ -1,27 +1,35 @@
 -- --------- TRIGGERS -------------
 
--- TRIGGER 1: Un trigger cuando un camión ingrese a la empresa, que actualice el estado del viaje ------
+-- TRIGGER 1: Un trigger cuando un camión ingrese o salga de la la empresa, que actualice el estado del viaje ------
      
-    -- Trigger que se disparará cada vez que un camión llegue a la empresa, enviando una actualización cualquiera,
-    -- que una vez en el trigger llamará al SP que asignará el valor correcto
+    -- Trigger que se disparará cada vez que un camión llegue o salga de la empres,
+
     CREATE OR REPLACE TRIGGER tgr_actualizar_estado
-    BEFORE UPDATE OF ID_ESTADO ON HISTORICO_VIAJES --Esto genera mutacion cambiarlo
+    BEFORE UPDATE OF ID_ESTADO ON HISTORICO_VIAJES
     FOR EACH ROW
     DECLARE
-    v_placa CAMIONES.PLACA%TYPE;
+
     BEGIN
-    
-        SELECT id_camion
-        INTO v_placa
-        FROM CAMIONES_ASIGNADOS
-        WHERE ID_ASIGNACION = :new.ID_ASIGNACION;
         
-        SP_actualizarEstado(v_placa); --Esto genera mutacion cambiarlo
+        CASE
+            WHEN :OLD.id_estado = 2 THEN --Cuando un camion llegue el estado 2 es en curso, lo cambia a finalizado (5)
+                :new.id_estado := 5;
+            WHEN :OLD.id_estado = 1 THEN --Cuando un camion sale el estado 1 es en sin asignar, lo cambia a en curso (2)
+                :new.id_estado := 2; 
+            WHEN :OLD.id_estado = 3 THEN --El viaje fue cancelado (3) por lo tanto se asigna como finalizado (5) cuando llega a la empresa
+                :new.id_estado := 5;
+            ELSE   
+                RAISE_APPLICATION_ERROR(-20007, 'Tas loco papi');
+          END CASE;  
     END;
     /
-    
 
-    COMMIT;
+        
+    
+    
+    
+    
+    
 -- TRIIGER 3: ------------------------------------ Un trigger cuando un camión ingrese a la empresa, que genere un turno de descarga
 
 CREATE OR REPLACE TRIGGER Tgr_generar_turno_descarga
@@ -29,11 +37,39 @@ AFTER INSERT OR UPDATE ON HISTORICO_VIAJES
 FOR EACH ROW
 
 DECLARE
+V_PLACA CAMIONES.PLACA%TYPE;
+V_ULTIMA_HORA TIMESTAMP;
+V_NUEVA_HORA TIMESTAMP;
 
 BEGIN
-    select * 
-    from turnos_descarga;
--- select 
+    IF :new.id_estado = 5 THEN
+        --Generar un id único (ya)
+        --obtener el id_del camion 
+        SELECT ca.id_camion
+        INTO V_PLACA
+        FROM CAMIONES_ASIGNADOS ca
+        WHERE id_asignacion = :NEW.ID_ASIGNACION;
+        --asignar una hora adecuada para el turno (sumarle 30 minutos a la hora del último turno)
+        SELECT HORA_ASIGNADA
+        INTO V_ULTIMA_HORA
+        FROM (
+            SELECT HORA_ASIGNADA
+            FROM TURNOS_DESCARGA
+            ORDER BY HORA_ASIGNADA DESC
+        )
+        WHERE ROWNUM = 1;
+        
+        --Aignar la hora
+        IF V_ULTIMA_HORA IS NULL THEN
+            V_NUEVA_HORA := SYSTIMESTAMP + NUMTODSINTERVAL(30, 'MINUTE');
+        ELSE
+            V_NUEVA_HORA := V_ULTIMA_HORA + NUMTODSINTERVAL(30, 'MINUTE');
+        END IF;
+        
+        INSERT INTO TURNOS_DESCARGA (ID_CAMION, HORA_ASIGNADA)
+        VALUES(V_PLACA, TO_CHAR(V_NUEVA_HORA, 'DD/MM/YY HH24:MI:SS'));
+    END IF;
+    
 END Tgr_generar_turno_descarga;
 /
 
@@ -171,10 +207,13 @@ END;
 /
 
 
--- update historico_viajes 
--- set id_estado = 3
--- where id_historial = 1;
+ --update historico_viajes 
+ --set descripcion = 'Chimba de viaje so y mi pai'
+ --where id_historial = 1;
 
+ --update historico_viajes 
+ --set id_estado = 6
+ --where id_historial = 1;
 
 ----------  Triggers para id únicos ?  -----------------------------  
 
@@ -209,7 +248,16 @@ END;
     END TgrGenIdCCA;
     /
     show errors;
-    
+
+-- para la tabla TURNOS_DESCARGA
+    CREATE OR REPLACE TRIGGER TgrGenIdTD
+      BEFORE INSERT ON TURNOS_DESCARGA
+      FOR EACH ROW
+    BEGIN 
+      :NEW.ID_TURNO := SEQ_TURNOS_DESCARGA.NEXTVAL;
+    END TgrGenIdTD;
+    /
+    show errors;    
 ---- SECUENCIAS para generar ids
 
 CREATE SEQUENCE SEQ_CAMIONES_VISITANTES
@@ -224,7 +272,11 @@ CREATE SEQUENCE SEQ_CAMBIOS_HISTORICO_VIAJES
   NOMAXVALUE;
 
 CREATE SEQUENCE SEQ_CAMBIOS_CAMIONES_ASIGNADOS
-  START WITH 0
+  START WITH 1
   INCREMENT BY 1
   NOMAXVALUE;
       
+CREATE SEQUENCE SEQ_TURNOS_DESCARGA
+  START WITH 1
+  INCREMENT BY 1
+  NOMAXVALUE;

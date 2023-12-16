@@ -32,7 +32,6 @@ CREATE OR REPLACE TYPE HistorialViajesCamionType AS OBJECT (
     fecha_llegada DATE
 );
 
-
 CREATE OR REPLACE TYPE HistorialViajesCamionTableType AS TABLE OF HistorialViajesCamionType;
 
 CREATE OR REPLACE FUNCTION HistorialViajesCamion (
@@ -59,7 +58,7 @@ END HistorialViajesCamion;
 /
 
 CREATE OR REPLACE VIEW VistaHistorialViajesCamion AS
-SELECT * FROM TABLE(HistorialViajesCamion('SMN139'));
+SELECT * FROM TABLE(HistorialViajesCamion('PQQ875'));
 
 select * from VistaHistorialViajesCamion
 
@@ -137,3 +136,5 @@ FROM
 INNER JOIN CAMIONES_ASIGNADOS CA ON CA.ID_ASIGNACION = HV.ID_ASIGNACION
 WHERE
     hv.tiempo_real < hv.tiempo_teorico;
+
+
