@@ -67,11 +67,15 @@ BEGIN
         END IF;
         
         INSERT INTO TURNOS_DESCARGA (ID_CAMION, HORA_ASIGNADA)
-        VALUES(V_PLACA, TO_CHAR(V_NUEVA_HORA, 'DD/MM/YY HH24:MI:SS'));
+        VALUES(V_PLACA, V_NUEVA_HORA);
     END IF;
     
 END Tgr_generar_turno_descarga;
 /
+
+update historico_viajes 
+set id_estado = 5
+where id_historial = 27;
 
 
 -- TRIIGER 5: ------------------------------------ Un trigger que lleve el control de cambios hechos en la base de datos (por cada tabla, es decir tenemos todos los triggers necesarios) 
@@ -115,10 +119,10 @@ BEGIN
         ACCION_REALIZADA,
         USUARIO_CAMBIO
     ) VALUES (
-        :OLD.ID_ASIGNACION,
+        :NEW.ID_ASIGNACION,
         :OLD.ID_CAMION,
         :OLD.ID_CONDUCTOR,
-        :OLD.ID_ASIGNACION,
+        :NEW.ID_ASIGNACION,
         :NEW.ID_CAMION,
         :NEW.ID_CONDUCTOR,
         SYSDATE,

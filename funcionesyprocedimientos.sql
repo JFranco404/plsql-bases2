@@ -4,7 +4,7 @@ CREATE OR REPLACE PROCEDURE registrarEntradaCamion (
     p_placa IN VARCHAR2
 )
 AS
-    v_idCamion NUMBER;
+    v_idCamion VARCHAR2(10);
     v_viajeInfo VARCHAR2(255);
     v_fecha_salida CAMIONES_VISITANTES.fecha_entrada%TYPE;
     v_fecha_entrada CAMIONES_VISITANTES.fecha_entrada%TYPE;
@@ -51,10 +51,16 @@ BEGIN
     END IF;
     
     COMMIT;
-    
+
+EXCEPTION
+   WHEN NO_DATA_FOUND THEN
+      -- Manejo de la excepción cuando no se encuentra ningún dato
+      DBMS_OUTPUT.PUT_LINE('No se encontraron datos para la placa ' || v_idCamion);  
     DBMS_OUTPUT.PUT_LINE(v_viajeInfo || ' tiempo teï¿½rico: '|| v_tiempo_teorico || 'tiempo real tardado: '|| v_tiempo_tardado);
 END registrarEntradaCamion;
 /
+
+EXEC registrarEntradaCamion('SSS139');
 
 CREATE TABLE CAMIONES_VISITANTES (
     id NUMBER PRIMARY KEY,
@@ -78,18 +84,33 @@ v_id_conductor CAMIONES_ASIGNADOS.ID_CONDUCTOR%TYPE;
 BEGIN
 --comprobar si existen ambos parï¿½metros, camiï¿½n y conductor
 
-SELECT id_camion, id_conductor 
-INTO v_id_camion, v_id_conductor
+--obtener la placa del camión
+SELECT DISTINCT id_camion 
+INTO v_id_camion
 FROM CAMIONES_ASIGNADOS
-WHERE id_camion = p_placa and id_conductor = p_nuevo_conductor;
+WHERE id_camion = p_placa;
+
+--obtener el conductor
+SELECT DISTINCT id_conductor 
+INTO v_id_conductor
+FROM CAMIONES_ASIGNADOS
+WHERE id_conductor = p_nuevo_conductor;
 
 IF v_id_camion IS NOT NULL and v_id_conductor IS NOT NULL then
-    UPDATE CAMIONES_ASIGNADOS set id_camion = p_placa, id_conductor = p_nuevo_conductor;
+    UPDATE CAMIONES_ASIGNADOS set id_camion = p_placa, id_conductor = p_nuevo_conductor
+    WHERE id_camion = p_placa;
 ELSE
     RAISE_APPLICATION_ERROR(-20001, 'El conductor no estï¿½ registrado en nuestro sistema, o el camiï¿½n no se encuentra');
 END IF;
+EXCEPTION
+   WHEN NO_DATA_FOUND THEN
+     v_id_camion := null;
+     v_id_conductor := null;
 END actualizar_conductor;
 /
+
+
+-- EXEC actualizar_conductor('SMN139','308666420');
 
 -- procedimiento 9 ---------------------------------------------------------------------------------------------------------------
 
@@ -174,28 +195,33 @@ END;
 
 CREATE OR REPLACE FUNCTION FnOrigenViaje
 (
-Vplaca IN CAMIONES.PLACA%TYPE
+  Vplaca IN CAMIONES.PLACA%TYPE
 )
 RETURN VARCHAR2
 AS
-Origen VARCHAR2(50);
-
+  Origen VARCHAR2(50);
 BEGIN
 
-SELECT CIUDAD_ORIGEN 
-INTO Origen
-FROM CAMIONES_ASIGNADOS CA
-INNER JOIN HISTORICO_VIAJES HV ON CA.ID_ASIGNACION = HV.ID_ASIGNACION
-INNER JOIN VIAJES V ON V.ID_VIAJE = HV.ID_VIAJE
-WHERE CA.ID_CAMION = Vplaca;
-
-RETURN Origen;
+    SELECT CIUDAD_ORIGEN
+    INTO Origen
+    FROM (
+        SELECT CIUDAD_ORIGEN
+          FROM CAMIONES_ASIGNADOS CA
+            INNER JOIN HISTORICO_VIAJES HV ON CA.ID_ASIGNACION = HV.ID_ASIGNACION
+            INNER JOIN VIAJES V ON V.ID_VIAJE = HV.ID_VIAJE
+          WHERE CA.ID_CAMION = Vplaca
+            AND HV.ID_ESTADO = 2
+          ORDER BY HV.FECHA_LLEGADA DESC
+    )
+    WHERE ROWNUM = 1;
+    RETURN Origen;
 END FnOrigenViaje;
 /
 SHOW ERRORS;
 
-SELECT FNFiltro('HIS',101,'A')
-FROM DUAL;
+--SELECT FnOrigenViaje('SMN139') AS RESULTADO
+--FROM DUAL;
+
 
 -- Funcion almacenada 3 --------------------------------------------------------
 
@@ -223,6 +249,7 @@ SHOW ERRORS;
 --Cambios
 ALTER TABLE VIAJES ADD PESO_CARGA_KG NUMBER;
 
+
 -- Funcion almacenada 5 --------------------------------------------------------
     --El trigger TR_CALCULAR_TIEMPO_TEORICO ya cumple esa funciï¿½n
 -- Funcion almacenada 7 --------------------------------------------------------
@@ -235,7 +262,7 @@ ALTER TABLE VIAJES ADD PESO_CARGA_KG NUMBER;
     BEGIN
         -- ciudad con mï¿½s viajes
         SELECT ciudad_origen 
-        INTO ciudad
+        --INTO ciudad
         FROM (
             SELECT v.ciudad_origen, count(*) AS CANTIDAD_VIAJES
             FROM VIAJES V
