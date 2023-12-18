@@ -1,4 +1,78 @@
 --  -------------------------------PROCEDIMIENTOS-------------------------------
+-- Procedimiento 12+1-- un procedimiento almacenado que elimine la asignación entre un conductor y un camión (puede ser un eliminado lógico)
+
+CREATE OR REPLACE PROCEDURE SP_ELIMINAR_CONDUCTOR (
+    p_placa IN VARCHAR2,
+    p_id_conductor IN VARCHAR2
+)
+AS
+    v_placa VARCHAR2(50);
+    v_id_conductor VARCHAR2(80);
+    
+BEGIN
+    --
+    SELECT ID_CAMION, ID_CONDUCTOR
+    INTO v_placa, v_id_conductor
+    FROM CAMIONES_ASIGNADOS 
+    WHERE ID_CAMION = p_placa AND ID_CONDUCTOR = p_id_conductor;
+    
+    UPDATE CAMIONES_ASIGNADOS SET eliminado = '1'
+    WHERE ID_CAMION = v_placa AND ID_CONDUCTOR = v_id_conductor;
+    
+    --COMMIT;
+EXCEPTION
+   WHEN NO_DATA_FOUND THEN
+      -- Manejo de la excepción cuando no se encuentra ningún dato
+      DBMS_OUTPUT.PUT_LINE('No se encontraron datos ');  
+END SP_ELIMINAR_CONDUCTOR;
+/
+ 
+EXEC SP_ELIMINAR_CONDUCTOR('JQJ845', '33859438');
+
+    UPDATE CAMIONES_ASIGNADOS SET eliminado = '0'
+    WHERE ID_CAMION = 'BEV586' AND ID_CONDUCTOR = '9405669751';
+    
+SELECT * FROM cambios_camiones_asignados;
+SELECT * FROM CAMIONES_ASIGNADOS;
+--ALTER TABLE CAMIONES_ASIGNADOS 
+--ADD ELIMINADO CHAR(1);
+
+ALTER TABLE CAMIONES_ASIGNADOS 
+ADD fecha_asignacion TIMESTAMP;
+
+
+
+-------------------------------------------------------------------------
+
+-- Un procedimiento almacenado que actualice el color de un camión (se pudo haber pintado)
+
+CREATE OR REPLACE PROCEDURE SP_ACTUALIZAR_COLOR (
+    p_placa IN VARCHAR2,
+    p_color IN VARCHAR2
+)
+AS
+    v_placa VARCHAR2(50);
+    
+BEGIN
+    --
+    SELECT PLACA
+    INTO v_placa
+    FROM CAMIONES 
+    WHERE PLACA = p_placa;
+    
+    UPDATE CAMIONES SET color = p_color
+    WHERE PLACA = v_placa;
+    
+    --COMMIT;
+EXCEPTION
+   WHEN NO_DATA_FOUND THEN
+      -- Manejo de la excepción cuando no se encuentra ningún dato
+      DBMS_OUTPUT.PUT_LINE('No se encontró un camión con esa placa ');  
+END SP_ACTUALIZAR_COLOR;
+/
+ 
+EXEC SP_ACTUALIZAR_COLOR('DEH270', 'negro');
+
 -- Procedimiento nï¿½mero 5 
 CREATE OR REPLACE PROCEDURE registrarEntradaCamion (
     p_placa IN VARCHAR2
@@ -234,14 +308,19 @@ AS
     carga CLOB:='';
 BEGIN
     -- tipo de carga, peso y destino.
-    SELECT 'Tipo carga: '|| TC.descripcion || ' || '||'Peso: '|| V.PESO_CARGA_KG || ' || ' || V.CIUDAD_DESTINO
+    SELECT car
     INTO carga
-    FROM CAMIONES_ASIGNADOS CA
-    INNER JOIN HISTORICO_VIAJES HV ON CA.ID_ASIGNACION = HV.ID_ASIGNACION
-    INNER JOIN VIAJES V ON V.ID_VIAJE = HV.ID_VIAJE
-    INNER JOIN TIPO_CARGA TC ON V.ID_TIPO_CARGA = TC.ID_TIPO_CARGA
-    WHERE CA.ID_CAMION = Vplaca;
+    FROM (
     
+        SELECT 'Tipo carga: '|| TC.descripcion || ' || '||'Peso: '|| V.PESO_CARGA_KG || ' || Ciudad Destino: ' || V.CIUDAD_DESTINO AS car
+        
+        FROM CAMIONES_ASIGNADOS CA
+        INNER JOIN HISTORICO_VIAJES HV ON CA.ID_ASIGNACION = HV.ID_ASIGNACION
+        INNER JOIN VIAJES V ON V.ID_VIAJE = HV.ID_VIAJE
+        INNER JOIN TIPO_CARGA TC ON V.ID_TIPO_CARGA = TC.ID_TIPO_CARGA
+        WHERE CA.ID_CAMION = Vplaca
+        ORDER BY HV.FECHA_LLEGADA DESC)
+    WHERE ROWNUM = 1;
     RETURN carga; 
 END FnDetalleCarga;
 /
@@ -249,6 +328,8 @@ SHOW ERRORS;
 --Cambios
 ALTER TABLE VIAJES ADD PESO_CARGA_KG NUMBER;
 
+SELECT FnDetalleCarga('SMN139') AS RESULTADO
+FROM DUAL;
 
 -- Funcion almacenada 5 --------------------------------------------------------
     --El trigger TR_CALCULAR_TIEMPO_TEORICO ya cumple esa funciï¿½n
@@ -275,22 +356,26 @@ ALTER TABLE VIAJES ADD PESO_CARGA_KG NUMBER;
         RETURN ciudad; 
     END FnCiudadMasViajes;
     /
+    
+SELECT FnCiudadMasViajes() AS RESULTADO
+FROM DUAL; 
      
     SHOW ERRORS;
 -- Funcion almacenada 9 --------------------------------------------------------
     -- Una funciï¿½n almacenada que me permita conocer cuï¿½l es la carga que mï¿½s se transporta en la empresa
     CREATE OR REPLACE FUNCTION FnCargaMasTransportada
-    RETURN VIAJES.ID_TIPO_CARGA%TYPE
+    RETURN VARCHAR
     AS
-        carga VIAJES.ID_TIPO_CARGA%TYPE;
+        carga VARCHAR(255);
     BEGIN
         -- carga mas transportada
-        SELECT id_tipo_carga --, peso_carga_kg, CANTIDAD por si se quiere devolver algo mï¿½s que solo el id del mï¿½s buscado (se necesitan mï¿½s variables)
+        SELECT 'id de la carga: ' || id_tipo_carga || ' nombre: '||nombre  --
         INTO carga
         FROM (
-            SELECT v.id_tipo_carga, v.peso_carga_kg, count(*) AS CANTIDAD
+            SELECT v.id_tipo_carga, v.peso_carga_kg, count(*) AS CANTIDAD, tc.nombre
             FROM VIAJES V
-            GROUP BY v.peso_carga_kg, v.id_tipo_carga
+            INNER JOIN TIPO_CARGA tc ON v.id_tipo_carga = tc.id_tipo_carga
+            GROUP BY v.peso_carga_kg, v.id_tipo_carga, tc.nombre
             ORDER BY count(*) DESC
             )
         WHERE ROWNUM = 1;
@@ -299,7 +384,9 @@ ALTER TABLE VIAJES ADD PESO_CARGA_KG NUMBER;
     END FnCargaMasTransportada;
     /
     SHOW ERRORS;
-   
+
+SELECT FnCargaMasTransportada() AS RESULTADO
+FROM DUAL; 
    
 CREATE OR REPLACE FUNCTION SF_DIFERENCIA_TIEMPO(
 	V_PLACA IN CAMIONES.PLACA%TYPE;
@@ -407,6 +494,33 @@ EXCEPTION
 END SF_CAMION_CON_MAS_VIAJES;
 /
 
+CREATE OR REPLACE FUNCTION ConductoresAsignadosACamion(
+    p_placa_camion IN VARCHAR2
+) RETURN VARCHAR2
+AS
+  v_info_conductores VARCHAR2(4000);
+BEGIN
+  SELECT LISTAGG('Cédula: ' || cd.CEDULA || ', Nombre: ' || cd.NOMBRES || ' ' || cd.APELLIDOS, '; ')
+         WITHIN GROUP (ORDER BY ca.ID_CONDUCTOR) INTO v_info_conductores
+  FROM CAMIONES_ASIGNADOS ca
+  JOIN CONDUCTORES cd ON ca.ID_CONDUCTOR = cd.CEDULA
+  WHERE ca.ID_CAMION = p_placa_camion;
+
+  IF v_info_conductores IS NOT NULL THEN
+    RETURN v_info_conductores;
+  ELSE
+    RETURN 'No hay conductores asignados al camión con placa ' || p_placa_camion;
+  END IF;
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    RETURN 'No hay información disponible.';
+  WHEN OTHERS THEN
+    RETURN 'Error al procesar la solicitud: ' || SQLERRM;
+END ConductoresAsignadosACamion;
+/
+
+
+SELECT ConductoresAsignadosACamion('SMN139') FROM DUAL;
 
 -- ----------------TRIGGERS--------------------------
     -- Trigger max id de CAMIONES_VISITANTES
